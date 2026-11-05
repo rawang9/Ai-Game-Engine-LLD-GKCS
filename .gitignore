@@ -1,0 +1,23 @@
+# Java compiled output
+*.class
+out/
+build/
+target/
+bin/
+out/
+
+# IDE settings
+.idea/
+*.iml
+.vscode/
+
+# macOS and Windows metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
