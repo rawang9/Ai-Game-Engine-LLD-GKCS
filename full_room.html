@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete 3D Kitchen Architectural Blueprint Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(217, 119, 6, 0.5); border-radius: 2px; }
+
+        .annotation-tag {
+            background: rgba(15, 23, 42, 0.95);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-family: monospace;
+            white-space: nowrap;
+            pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .accordion-content.active {
+            max-height: 350px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 select-none">
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container" class="relative"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="absolute top-4 left-4 right-4 glass-panel rounded-xl px-5 py-3 flex flex-wrap justify-between items-center gap-4 z-20 shadow-2xl">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-amber-500/20 border border-amber-500/40 rounded-lg text-amber-400">
+                <i class="fa-solid fa-cubes text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    Complete 3D Kitchen Architectural Blueprint <span class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono">12 FT × 7 FT</span>
+                </h1>
+                <p class="text-xs text-slate-400">Smart Interior Camera, Dynamic Wall Hiding & Object Highlighting</p>
+            </div>
+        </div>
+
+        <!-- Camera Views & Interactive Controls -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="setCameraView('iso')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-camera text-amber-400"></i> Full Room View
+            </button>
+            <button onclick="setCameraView('front')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-fire-burner text-sky-400"></i> Front Wall (7FT)
+            </button>
+            <button onclick="setCameraView('right')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-sink text-emerald-400"></i> Right Wall (12FT)
+            </button>
+            <button onclick="setCameraView('left')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-door-sliding text-purple-400"></i> Left Wall (12FT)
+            </button>
+            <button id="isolation-toggle-btn" onclick="toggleIsolationMode()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-eye-slash"></i> Isolate Target: OFF
+            </button>
+            <button id="label-toggle-btn" onclick="toggleLabels()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-tags"></i> Labels: ON
+            </button>
+            <button id="light-toggle-btn" onclick="toggleLights()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-lightbulb"></i> LED Light: ON
+            </button>
+            <button id="door-slide-btn" onclick="toggleDoorSlide()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-arrows-left-right"></i> Slide Door: Open
+            </button>
+        </div>
+    </header>
+
+    <!-- Overlay Container for 3D Anchored Text Callouts -->
+    <div id="labels-overlay" class="absolute inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+    <!-- Sidebar Info Panel (Left) -->
+    <aside class="absolute left-4 top-24 bottom-6 w-80 glass-panel rounded-xl p-4 flex flex-col justify-between z-20 shadow-2xl overflow-y-auto">
+        <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders"></i> Layout Zones & Focus
+                </h2>
+                <button onclick="toggleAccordion()" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 flex items-center gap-1 transition">
+                    <span id="accordion-status">Collapse List</span> <i id="accordion-icon" class="fa-solid fa-chevron-up"></i>
+                </button>
+            </div>
+
+            <!-- Section Selectors (Accordion Collapsible) -->
+            <div id="accordion-container" class="accordion-content active space-y-2 mb-4">
+                <button onclick="highlightSection('front_cooktop', this)" class="section-btn w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-amber-300">1. Front Wall Cooking & Louver</div>
+                            <div class="text-[10px] text-slate-400">Cooktop, Drawers, Elica Chimney & Window</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-amber-400"></i>
+                </button>
+
+                <button onclick="highlightSection('right_wash', this)" class="section-btn w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-300">2. Right Wall Prep & Water Zone</div>
+                            <div class="text-[10px] text-slate-400">Cabinets 1 & 2, Sink, RO Niche & Dish Rack</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-emerald-400"></i>
+                </button>
+
+                <button onclick="highlightSection('right_tall_fridge', this)" class="section-btn w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/50 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-sky-400"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-sky-300">3. Tall Unit & Refrigerator</div>
+                            <div class="text-[10px] text-slate-400">3-Tier Appliance Tower & Fridge End Box</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-sky-400"></i>
+                </button>
+
+                <button onclick="highlightSection('japanese_door', this)" class="section-btn w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-purple-400"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-purple-300">4. Japanese Door & Clearance</div>
+                            <div class="text-[10px] text-slate-400">6ft Sliding Door & 1.5-2ft Clearance Gap</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-purple-400"></i>
+                </button>
+
+                <button onclick="highlightSection('cylinder', this)" class="section-btn w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-red-500/50 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-red-300">5. Gas Cylinder Cabinet</div>
+                            <div class="text-[10px] text-slate-400">Far Left Base Unit w/ Bottom Vents</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-red-400"></i>
+                </button>
+
+                <button onclick="highlightSection('ro_niche', this)" class="section-btn w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-cyan-400"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-cyan-300">6. Open RO Water Niche</div>
+                            <div class="text-[10px] text-slate-400">39W × 50H × 29D cm Niche Purifier</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-cyan-400"></i>
+                </button>
+            </div>
+
+            <!-- Dynamic Inspector Card -->
+            <div id="inspector-card" class="bg-slate-900/90 rounded-xl p-3.5 border border-slate-800 shadow-inner">
+                <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1 flex items-center justify-between" id="spec-title">
+                    <span><i class="fa-solid fa-hand-pointer"></i> Component Inspector</span>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed" id="spec-desc">
+                    Click any sidebar option or 3D element to isolate, view specifications, and focus the view inside the room without wall obstruction.
+                </p>
+                <div id="active-focus-tag" class="hidden mt-2 pt-2 border-t border-slate-800/80 text-[10px] font-mono text-emerald-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-dot text-[8px] animate-pulse"></i> Active Focus Target Locked
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Dimension Summary -->
+        <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 space-y-1 font-mono">
+            <div class="flex justify-between"><span>Room Size:</span><span class="text-slate-200">12 FT × 7 FT L-Shape</span></div>
+            <div class="flex justify-between"><span>Front Wall:</span><span class="text-slate-200">7.0 FT (213 cm)</span></div>
+            <div class="flex justify-between"><span>Right Wall:</span><span class="text-slate-200">12.0 FT (366 cm)</span></div>
+            <div class="flex justify-between"><span>Left Wall:</span><span class="text-slate-200">12.0 FT (366 cm)</span></div>
+            <div class="flex justify-between"><span>RO Niche:</span><span class="text-amber-400">39W × 50H × 29D cm</span></div>
+            <div class="flex justify-between"><span>Tall Unit:</span><span class="text-emerald-400">3-Tier w/ Microwave</span></div>
+            <div class="flex justify-between"><span>Corner Clearance:</span><span class="text-sky-400">1.5 - 2.0 FT Gap</span></div>
+        </div>
+    </aside>
+
+    <!-- Bottom Controls Overlay -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 glass-panel rounded-full px-5 py-2 z-20 flex items-center gap-4 shadow-xl text-xs text-slate-300">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-mouse-pointer text-amber-400"></i> Left-Click + Drag: Rotate</span>
+        <span class="text-slate-600">|</span>
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-hand text-sky-400"></i> Right-Click + Drag: Pan</span>
+        <span class="text-slate-600">|</span>
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrows-up-down text-emerald-400"></i> Scroll: Zoom</span>
+    </div>
+
+    <!-- Three.js App Script -->
+    <script>
+        let scene, camera, renderer, controls;
+        let interactiveObjects = [];
+        let wallObjects = {};
+        let labelsData = [];
+        let labelsVisible = true;
+        let isolationMode = false;
+        let activeHighlightedObj = null;
+        let originalEmissive = new Map();
+
+        let profileLightGroup = new THREE.Group();
+        let profileLightState = true;
+        let doorIsOpen = false;
+        let slidingPanel;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+
+        // Architectural Dimensions (Scale: 1 unit = 1 meter approx)
+        const FRONT_W = 2.13; // 7 feet width
+        const RIGHT_L = 3.66; // 12 feet length
+        const LEFT_L  = 3.66; // 12 feet length
+        const WALL_H  = 2.90; // ~9.5 feet height
+
+        // Materials Palette
+        const materials = {
+            wood: new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.4, metalness: 0.1 }),
+            darkWood: new THREE.MeshStandardMaterial({ color: 0x5C3A17, roughness: 0.5 }),
+            granite: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.3 }),
+            wall: new THREE.MeshStandardMaterial({ color: 0xE8E3D9, roughness: 0.8, transparent: true, opacity: 1.0 }),
+            floor: new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.5 }),
+            ss: new THREE.MeshStandardMaterial({ color: 0xC0C0C0, roughness: 0.2, metalness: 0.8 }),
+            cooktop: new THREE.MeshStandardMaterial({ color: 0x1A1A1A, roughness: 0.3, metalness: 0.5 }),
+            burner: new THREE.MeshStandardMaterial({ color: 0xD4AF37, roughness: 0.3, metalness: 0.7 }),
+            glassCabinet: new THREE.MeshPhysicalMaterial({ color: 0xE0F7FA, transparent: true, opacity: 0.4, roughness: 0.1, transmission: 0.8 }),
+            louverGlass: new THREE.MeshPhysicalMaterial({ color: 0xB3E5FC, transparent: true, opacity: 0.5, roughness: 0.1, transmission: 0.85 }),
+            louverFrame: new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.6 }),
+            aluminumFrame: new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.3, metalness: 0.8 }),
+            frostedGlass: new THREE.MeshPhysicalMaterial({ color: 0xE0F7FA, transparent: true, opacity: 0.65, roughness: 0.4, transmission: 0.6, metalness: 0.1 }),
+            roBody: new THREE.MeshStandardMaterial({ color: 0xF5F5F5, roughness: 0.3 }),
+            fridge: new THREE.MeshStandardMaterial({ color: 0x708090, roughness: 0.3, metalness: 0.5 }),
+            microBody: new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 }),
+            switchboard: new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.2 }),
+            switchButton: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.3 }),
+            skirting: new THREE.MeshStandardMaterial({ color: 0x1A1A1A, roughness: 0.7 }),
+            clearanceZone: new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.15 }),
+            ledGlow: new THREE.MeshBasicMaterial({ color: 0xFFD166 })
+        };
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0f1d);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(-2.2, 2.8, 4.8);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.target.set(0, 1.1, -0.2);
+            controls.maxPolarAngle = Math.PI / 2 + 0.05;
+
+            setupLighting();
+            buildCompleteKitchenScene();
+
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+
+            animate();
+        }
+
+        function setupLighting() {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfff5ea, 0.85);
+            sunLight.position.set(3, 7, 4);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            const fillLight = new THREE.DirectionalLight(0xd0e0ff, 0.4);
+            fillLight.position.set(-4, 5, -2);
+            scene.add(fillLight);
+        }
+
+        function buildCompleteKitchenScene() {
+            // Room Boundaries
+            const zFront = -RIGHT_L / 2; // -1.83m
+            const xLeft  = -FRONT_W / 2; // -1.065m
+            const xRight = FRONT_W / 2;  // +1.065m
+
+            // 1. FLOOR SLAB
+            const floorGeo = new THREE.PlaneGeometry(FRONT_W + 1, RIGHT_L + 1);
+            const floorMesh = new THREE.Mesh(floorGeo, materials.floor);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.set(0, 0, 0);
+            floorMesh.receiveShadow = true;
+            scene.add(floorMesh);
+
+            // 2. BACK WALL SURFACES WITH IDENTIFIERS FOR CAMERA UNBLOCKING
+            // Front Wall (7 ft)
+            const frontWallGeo = new THREE.BoxGeometry(FRONT_W, WALL_H, 0.1);
+            const frontWallMesh = new THREE.Mesh(frontWallGeo, materials.wall.clone());
+            frontWallMesh.position.set(0, WALL_H / 2, zFront - 0.05);
+            frontWallMesh.receiveShadow = true;
+            scene.add(frontWallMesh);
+            wallObjects.front = frontWallMesh;
+
+            // Right Wall (12 ft)
+            const rightWallGeo = new THREE.BoxGeometry(0.1, WALL_H, RIGHT_L);
+            const rightWallMesh = new THREE.Mesh(rightWallGeo, materials.wall.clone());
+            rightWallMesh.position.set(xRight + 0.05, WALL_H / 2, 0);
+            rightWallMesh.receiveShadow = true;
+            scene.add(rightWallMesh);
+            wallObjects.right = rightWallMesh;
+
+            // Left Wall (12 ft - Plain refinished wall, concrete racks removed)
+            const leftWallGeo = new THREE.BoxGeometry(0.1, WALL_H, LEFT_L);
+            const leftWallMesh = new THREE.Mesh(leftWallGeo, materials.wall.clone());
+            leftWallMesh.position.set(xLeft - 0.05, WALL_H / 2, 0);
+            leftWallMesh.receiveShadow = true;
+            leftWallMesh.userData = {
+                title: "Demolished & Refinished Left Wall",
+                desc: "Existing concrete racks completely removed and finished with plain washable emulsion. Clean floor contact."
+            };
+            scene.add(leftWallMesh);
+            interactiveObjects.push(leftWallMesh);
+            wallObjects.left = leftWallMesh;
+
+            // Back Wall (7 ft - Plain budget finish)
+            const backWallGeo = new THREE.BoxGeometry(FRONT_W, WALL_H, 0.1);
+            const backWallMesh = new THREE.Mesh(backWallGeo, materials.wall.clone());
+            backWallMesh.position.set(0, WALL_H / 2, RIGHT_L / 2 + 0.05);
+            scene.add(backWallMesh);
+            wallObjects.back = backWallMesh;
+
+            // 3. WATERPROOF SKIRTING (Applied EXCLUSIVELY along L-Shaped Counter base)
+            const frontSkirtingGeo = new THREE.BoxGeometry(FRONT_W, 0.15, 0.58);
+            const frontSkirtingMesh = new THREE.Mesh(frontSkirtingGeo, materials.skirting);
+            frontSkirtingMesh.position.set(0, 0.075, zFront + 0.29);
+            scene.add(frontSkirtingMesh);
+
+            const rightSkirtingGeo = new THREE.BoxGeometry(0.58, 0.15, RIGHT_L - 0.60 - 0.66);
+            const rightSkirtingMesh = new THREE.Mesh(rightSkirtingGeo, materials.skirting);
+            rightSkirtingMesh.position.set(xRight - 0.29, 0.075, zFront + 0.60 + (RIGHT_L - 1.26) / 2);
+            scene.add(rightSkirtingMesh);
+
+            // -------------------------------------------------------------
+            // FRONT WALL (7 FT) ZONE
+            // -------------------------------------------------------------
+            const startX = xLeft;
+
+            // Lower Base 1: Gas Cylinder Cabinet (Far Left ~0.45m)
+            const cylW = 0.45;
+            const cylX = startX + cylW / 2;
+            const cylGeo = new THREE.BoxGeometry(cylW, 0.72, 0.58);
+            const cylMesh = new THREE.Mesh(cylGeo, materials.wood.clone());
+            cylMesh.position.set(cylX, 0.51, zFront + 0.29);
+            cylMesh.castShadow = true;
+            cylMesh.userData = {
+                id: "cylinder",
+                title: "Gas Cylinder Cabinet (Far Left)",
+                desc: "Hinged door with bottom ventilation cutouts and internal hose routing to cooktop."
+            };
+            scene.add(cylMesh);
+            interactiveObjects.push(cylMesh);
+            createLabel(cylX, 0.55, zFront + 0.6, "Cylinder Cabinet");
+
+            // Lower Base 2: 3-Tier Graduated Modular Drawers (~0.65m)
+            const drawerW = 0.65;
+            const drawerX = startX + cylW + drawerW / 2;
+            const drawerBoxGeo = new THREE.BoxGeometry(drawerW, 0.72, 0.58);
+            const drawerBoxMesh = new THREE.Mesh(drawerBoxGeo, materials.wood.clone());
+            drawerBoxMesh.position.set(drawerX, 0.51, zFront + 0.29);
+            drawerBoxMesh.userData = {
+                id: "drawers",
+                title: "3-Tier Graduated Drawers",
+                desc: "Top: Cutlery & paltas (X), Middle: Bowls/Pots (X), Bottom: Deep Kadahis & Cookers (1.5X)."
+            };
+            scene.add(drawerBoxMesh);
+            interactiveObjects.push(drawerBoxMesh);
+
+            // Front Drawer Face Dividers
+            const d1Geo = new THREE.BoxGeometry(drawerW - 0.02, 0.18, 0.01);
+            const d1Mesh = new THREE.Mesh(d1Geo, materials.darkWood);
+            d1Mesh.position.set(drawerX, 0.77, zFront + 0.585);
+            scene.add(d1Mesh);
+
+            const d2Geo = new THREE.BoxGeometry(drawerW - 0.02, 0.18, 0.01);
+            const d2Mesh = new THREE.Mesh(d2Geo, materials.darkWood);
+            d2Mesh.position.set(drawerX, 0.57, zFront + 0.585);
+            scene.add(d2Mesh);
+
+            const d3Geo = new THREE.BoxGeometry(drawerW - 0.02, 0.28, 0.01);
+            const d3Mesh = new THREE.Mesh(d3Geo, materials.darkWood);
+            d3Mesh.position.set(drawerX, 0.31, zFront + 0.585);
+            scene.add(d3Mesh);
+            createLabel(drawerX, 0.55, zFront + 0.6, "3-Tier Drawers [X,X,1.5X]");
+
+            // Lower Base 3: 3-Tier Vertical Veg Pull-out (~0.25m)
+            const vegW = 0.25;
+            const vegX = startX + cylW + drawerW + vegW / 2;
+            const vegGeo = new THREE.BoxGeometry(vegW, 0.72, 0.58);
+            const vegMesh = new THREE.Mesh(vegGeo, materials.darkWood.clone());
+            vegMesh.position.set(vegX, 0.51, zFront + 0.29);
+            vegMesh.userData = {
+                id: "veg",
+                title: "3-Tier Vertical Veg Wire Pull-out",
+                desc: "Perforated SS wire baskets for dry storage of onions, potatoes, and garlic."
+            };
+            scene.add(vegMesh);
+            interactiveObjects.push(vegMesh);
+
+            const vegBarGeo = new THREE.BoxGeometry(0.02, 0.60, 0.02);
+            const vegBarMesh = new THREE.Mesh(vegBarGeo, materials.ss);
+            vegBarMesh.position.set(vegX, 0.51, zFront + 0.59);
+            scene.add(vegBarMesh);
+            createLabel(vegX, 0.55, zFront + 0.6, "Veg Wire Pull-out");
+
+            // Lower Base 4: Right Hinged Cabinet connecting to Right Wall (~0.78m)
+            const rightCabW = FRONT_W - (cylW + drawerW + vegW);
+            const rightCabX = startX + cylW + drawerW + vegW + rightCabW / 2;
+            const rightCabGeo = new THREE.BoxGeometry(rightCabW, 0.72, 0.58);
+            const rightCabMesh = new THREE.Mesh(rightCabGeo, materials.wood.clone());
+            rightCabMesh.position.set(rightCabX, 0.51, zFront + 0.29);
+            rightCabMesh.userData = {
+                id: "right_cab",
+                title: "Right Corner Hinged Base Cabinet",
+                desc: "Budget-friendly cabinet connecting smoothly into the L-shaped right wall counter turn."
+            };
+            scene.add(rightCabMesh);
+            interactiveObjects.push(rightCabMesh);
+
+            // JET BLACK GRANITE COUNTERTOP SLAB
+            const frontGraniteGeo = new THREE.BoxGeometry(FRONT_W, 0.04, 0.60);
+            const frontGraniteMesh = new THREE.Mesh(frontGraniteGeo, materials.granite.clone());
+            frontGraniteMesh.position.set(0, 0.87, zFront + 0.30);
+            frontGraniteMesh.castShadow = true;
+            scene.add(frontGraniteMesh);
+
+            // 3-Burner Gas Cooktop
+            const cooktopGeo = new THREE.BoxGeometry(0.70, 0.03, 0.42);
+            const cooktopMesh = new THREE.Mesh(cooktopGeo, materials.cooktop.clone());
+            cooktopMesh.position.set(drawerX, 0.905, zFront + 0.30);
+            cooktopMesh.userData = {
+                id: "front_cooktop",
+                title: "3-Burner Gas Cooktop",
+                desc: "Centered directly beneath the curved glass chimney hood for smoke capture."
+            };
+            scene.add(cooktopMesh);
+            interactiveObjects.push(cooktopMesh);
+
+            for (let i = -0.22; i <= 0.22; i += 0.22) {
+                const burnerGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16);
+                const burnerMesh = new THREE.Mesh(burnerGeo, materials.burner);
+                burnerMesh.position.set(drawerX + i, 0.925, zFront + 0.30);
+                scene.add(burnerMesh);
+            }
+            createLabel(drawerX, 0.95, zFront + 0.3, "3-Burner Cooktop");
+
+            // UPPER FRONT WALL CABINETS
+            const gCabLW = 0.30;
+            const gCabLX = startX + gCabLW / 2;
+            const gCabLGeo = new THREE.BoxGeometry(gCabLW, 0.70, 0.35);
+            const gCabLMesh = new THREE.Mesh(gCabLGeo, materials.wood.clone());
+            gCabLMesh.position.set(gCabLX, 1.80, zFront + 0.175);
+            gCabLMesh.userData = {
+                id: "spice_l",
+                title: "Left Glass Spice Cabinet",
+                desc: "Vertical spice storage cabinet with glass shutter."
+            };
+            scene.add(gCabLMesh);
+            interactiveObjects.push(gCabLMesh);
+
+            const gPaneLGeo = new THREE.BoxGeometry(gCabLW - 0.04, 0.62, 0.01);
+            const gPaneLMesh = new THREE.Mesh(gPaneLGeo, materials.glassCabinet);
+            gPaneLMesh.position.set(gCabLX, 1.80, zFront + 0.35);
+            scene.add(gPaneLMesh);
+
+            // Elica Chimney Wooden Box Cabinet (~0.85m)
+            const chimCabW = 0.85;
+            const chimCabX = startX + gCabLW + chimCabW / 2;
+            const chimCabGeo = new THREE.BoxGeometry(chimCabW, 0.70, 0.35);
+            const chimCabMesh = new THREE.Mesh(chimCabGeo, materials.wood.clone());
+            chimCabMesh.position.set(chimCabX, 1.80, zFront + 0.175);
+            chimCabMesh.userData = {
+                id: "chimney",
+                title: "Wooden Chimney Cabinet",
+                desc: "Custom wooden enclosure hiding body and ducting of Elica curved chimney."
+            };
+            scene.add(chimCabMesh);
+            interactiveObjects.push(chimCabMesh);
+            createLabel(chimCabX, 2.05, zFront + 0.35, "Elica Chimney Box");
+
+            // Elica Hood Bottom
+            const hoodGeo = new THREE.BoxGeometry(0.80, 0.08, 0.45);
+            const hoodMesh = new THREE.Mesh(hoodGeo, materials.ss);
+            hoodMesh.position.set(chimCabX, 1.41, zFront + 0.225);
+            scene.add(hoodMesh);
+
+            const glassWingGeo = new THREE.BoxGeometry(0.88, 0.01, 0.48);
+            const glassWingMesh = new THREE.Mesh(glassWingGeo, materials.louverGlass);
+            glassWingMesh.position.set(chimCabX, 1.40, zFront + 0.24);
+            scene.add(glassWingMesh);
+
+            // Right Glass Spice Cabinet (~0.30m)
+            const gCabRW = 0.30;
+            const gCabRX = startX + gCabLW + chimCabW + gCabRW / 2;
+            const gCabRGeo = new THREE.BoxGeometry(gCabRW, 0.70, 0.35);
+            const gCabRMesh = new THREE.Mesh(gCabRGeo, materials.wood.clone());
+            gCabRMesh.position.set(gCabRX, 1.80, zFront + 0.175);
+            gCabRMesh.userData = {
+                id: "spice_r",
+                title: "Right Glass Spice Cabinet",
+                desc: "Vertical glass cabinet for oils, tea, and condiment jars."
+            };
+            scene.add(gCabRMesh);
+            interactiveObjects.push(gCabRMesh);
+
+            const gPaneRGeo = new THREE.BoxGeometry(gCabRW - 0.04, 0.62, 0.01);
+            const gPaneRMesh = new THREE.Mesh(gPaneRGeo, materials.glassCabinet);
+            gPaneRMesh.position.set(gCabRX, 1.80, zFront + 0.35);
+            scene.add(gPaneRMesh);
+
+            // FULL-HEIGHT GLASS LOUVER WINDOW
+            const louverW = FRONT_W - (gCabLW + chimCabW + gCabRW);
+            const louverX = startX + gCabLW + chimCabW + gCabRW + louverW / 2;
+            const louverH = 1.26;
+
+            const lFrameGeo = new THREE.BoxGeometry(louverW, louverH, 0.06);
+            const lFrameMesh = new THREE.Mesh(lFrameGeo, materials.louverFrame);
+            lFrameMesh.position.set(louverX, 0.89 + louverH / 2, zFront + 0.03);
+            scene.add(lFrameMesh);
+
+            const numSlats = 8;
+            const slatH = louverH / numSlats;
+            for (let i = 0; i < numSlats; i++) {
+                const slatGeo = new THREE.BoxGeometry(louverW - 0.04, 0.01, 0.12);
+                const slatMesh = new THREE.Mesh(slatGeo, materials.louverGlass.clone());
+                slatMesh.rotation.x = -0.35;
+                slatMesh.position.set(louverX, 0.92 + i * slatH, zFront + 0.03);
+                slatMesh.userData = {
+                    id: "louver",
+                    title: "Full-Height Glass Louver Window",
+                    desc: "Adjustable glass slats running continuously from top cabinet down to countertop."
+                };
+                scene.add(slatMesh);
+                interactiveObjects.push(slatMesh);
+            }
+            createLabel(louverX, 1.5, zFront + 0.1, "Full-Height Glass Louver");
+
+            // -------------------------------------------------------------
+            // RIGHT WALL (12 FT) ZONE
+            // -------------------------------------------------------------
+            const startZ = zFront + 0.60;
+            const rightGraniteL = RIGHT_L - 0.60 - 0.60 - 0.66;
+
+            // Right Granite Countertop
+            const rightGraniteGeo = new THREE.BoxGeometry(0.60, 0.04, rightGraniteL);
+            const rightGraniteMesh = new THREE.Mesh(rightGraniteGeo, materials.granite.clone());
+            rightGraniteMesh.position.set(xRight - 0.30, 0.87, startZ + rightGraniteL / 2);
+            rightGraniteMesh.castShadow = true;
+            rightGraniteMesh.userData = {
+                id: "right_prep_counter",
+                title: "Prep & Wash Granite Countertop",
+                desc: "Jet black granite slab running seamlessly across prep and sink area."
+            };
+            scene.add(rightGraniteMesh);
+            interactiveObjects.push(rightGraniteMesh);
+
+            // PREP ZONE LOWER & UPPER CABINETS 1 & 2
+            const prepL = 0.90;
+            const prepZ = startZ + prepL / 2;
+
+            const prepBaseGeo = new THREE.BoxGeometry(0.58, 0.72, prepL);
+            const prepBaseMesh = new THREE.Mesh(prepBaseGeo, materials.wood.clone());
+            prepBaseMesh.position.set(xRight - 0.29, 0.51, prepZ);
+            prepBaseMesh.userData = {
+                id: "prep_base",
+                title: "Prep Zone Lower Cabinet",
+                desc: "Hinged double-door cabinet for bulk groceries and heavy cooking pots."
+            };
+            scene.add(prepBaseMesh);
+            interactiveObjects.push(prepBaseMesh);
+
+            const upperPrepGeo = new THREE.BoxGeometry(0.35, 0.70, prepL);
+            const upperPrepMesh = new THREE.Mesh(upperPrepGeo, materials.wood.clone());
+            upperPrepMesh.position.set(xRight - 0.175, 1.80, prepZ);
+            upperPrepMesh.userData = {
+                id: "cabs_1_2",
+                title: "Cabinets 1 & 2 (Upper Prep Storage)",
+                desc: "Wall-mounted double overhead cabinet unit for spices, crockery, and dry ingredients."
+            };
+            scene.add(upperPrepMesh);
+            interactiveObjects.push(upperPrepMesh);
+            createLabel(xRight - 0.18, 2.20, prepZ, "Cabinets 1 & 2");
+
+            // WASH ZONE (Sink + Open RO Niche + Dish Rack + Geyser Box)
+            const washL = 0.90;
+            const washZ = startZ + prepL + washL / 2;
+
+            // Under-Sink Cabinet
+            const sinkBaseGeo = new THREE.BoxGeometry(0.58, 0.72, washL);
+            const sinkBaseMesh = new THREE.Mesh(sinkBaseGeo, materials.wood.clone());
+            sinkBaseMesh.position.set(xRight - 0.29, 0.51, washZ);
+            sinkBaseMesh.userData = {
+                id: "right_wash",
+                title: "Under-Sink Cabinet",
+                desc: "Hinged cabinet housing sink plumbing, bin holder, and cleaning supplies."
+            };
+            scene.add(sinkBaseMesh);
+            interactiveObjects.push(sinkBaseMesh);
+
+            // Single-Bowl Sink & Faucet
+            const sinkGeo = new THREE.BoxGeometry(0.45, 0.02, 0.55);
+            const sinkMesh = new THREE.Mesh(sinkGeo, materials.ss);
+            sinkMesh.position.set(xRight - 0.30, 0.871, washZ);
+            scene.add(sinkMesh);
+
+            const faucetGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.25);
+            const faucetMesh = new THREE.Mesh(faucetGeo, materials.ss);
+            faucetMesh.position.set(xRight - 0.10, 1.0, washZ);
+            scene.add(faucetMesh);
+            createLabel(xRight - 0.30, 0.55, washZ, "Single Bowl Sink");
+
+            // OPEN RO NICHE (39W × 50H × 29D cm)
+            const roNicheZ = washZ - 0.20;
+            const roNicheFrameGeo = new THREE.BoxGeometry(0.32, 0.52, 0.42);
+            const roNicheFrameMesh = new THREE.Mesh(roNicheFrameGeo, materials.darkWood);
+            roNicheFrameMesh.position.set(xRight - 0.16, 1.45 + 0.22, roNicheZ);
+            scene.add(roNicheFrameMesh);
+
+            const roGeo = new THREE.BoxGeometry(0.29, 0.50, 0.39);
+            const roMesh = new THREE.Mesh(roGeo, materials.roBody.clone());
+            roMesh.position.set(xRight - 0.16, 1.45 + 0.22, roNicheZ);
+            roMesh.userData = {
+                id: "ro_niche",
+                title: "Open RO Niche (39W × 50H × 29D cm)",
+                desc: "Mounted inside open-front niche for direct 24/7 water dispensing without opening cabinet doors."
+            };
+            scene.add(roMesh);
+            interactiveObjects.push(roMesh);
+            createLabel(xRight - 0.16, 1.70, roNicheZ, "Open RO Niche");
+
+            // Top Geyser Provision Box
+            const geyserBoxGeo = new THREE.BoxGeometry(0.35, 0.25, 0.42);
+            const geyserBoxMesh = new THREE.Mesh(geyserBoxGeo, materials.wood.clone());
+            geyserBoxMesh.position.set(xRight - 0.175, 1.45 + 0.575, roNicheZ);
+            geyserBoxMesh.userData = {
+                id: "geyser_box",
+                title: "Future Geyser Provision Box",
+                desc: "Enclosed upper box concealing 16A electrical point and piping for instant water heater."
+            };
+            scene.add(geyserBoxMesh);
+            interactiveObjects.push(geyserBoxMesh);
+
+            // 2-TIER STAINLESS STEEL DISH RACK
+            const rackZ = washZ + 0.20;
+            const rackFrameGeo = new THREE.BoxGeometry(0.35, 0.70, 0.44);
+            const rackFrameMesh = new THREE.Mesh(rackFrameGeo, materials.wood.clone());
+            rackFrameMesh.position.set(xRight - 0.175, 1.80, rackZ);
+            rackFrameMesh.userData = {
+                id: "dish_rack",
+                title: "2-Tier SS Dish Rack",
+                desc: "Stainless steel dish drying rack positioned over sink with slotted bottom for direct drip-draining."
+            };
+            scene.add(rackFrameMesh);
+            interactiveObjects.push(rackFrameMesh);
+
+            const rackBarsGeo = new THREE.BoxGeometry(0.28, 0.02, 0.40);
+            const rackBarsMesh = new THREE.Mesh(rackBarsGeo, materials.ss);
+            rackBarsMesh.position.set(xRight - 0.175, 1.55, rackZ);
+            scene.add(rackBarsMesh);
+            createLabel(xRight - 0.18, 2.20, rackZ, "2-Tier SS Dish Rack");
+
+            // Under-Cabinet LED Profile Light Strip
+            const ledGeo = new THREE.BoxGeometry(0.03, 0.015, rightGraniteL);
+            const ledMesh = new THREE.Mesh(ledGeo, materials.ledGlow);
+            ledMesh.position.set(xRight - 0.32, 1.44, startZ + rightGraniteL / 2);
+            profileLightGroup.add(ledMesh);
+
+            const profilePointLight = new THREE.PointLight(0xffd166, 0.8, 3.5);
+            profilePointLight.position.set(xRight - 0.30, 1.35, startZ + rightGraniteL / 2);
+            profileLightGroup.add(profilePointLight);
+            scene.add(profileLightGroup);
+
+            // TALL APPLIANCE UNIT (3-TIER COLUMN)
+            const tallL = 0.60;
+            const tallZ = startZ + rightGraniteL + tallL / 2;
+
+            const tallUnitGeo = new THREE.BoxGeometry(0.60, 2.10, tallL);
+            const tallUnitMesh = new THREE.Mesh(tallUnitGeo, materials.wood.clone());
+            tallUnitMesh.position.set(xRight - 0.30, 1.20, tallZ);
+            tallUnitMesh.castShadow = true;
+            tallUnitMesh.userData = {
+                id: "right_tall_fridge",
+                title: "3-Tier Appliance Tall Unit",
+                desc: "Houses microwave and mixer-grinder with upward gas-lift doors and extra pantry storage."
+            };
+            scene.add(tallUnitMesh);
+            interactiveObjects.push(tallUnitMesh);
+
+            // Microwave Niche & Model
+            const microNicheGeo = new THREE.BoxGeometry(0.52, 0.38, 0.54);
+            const microNicheMesh = new THREE.Mesh(microNicheGeo, new THREE.MeshStandardMaterial({ color: 0x222222 }));
+            microNicheMesh.position.set(xRight - 0.32, 1.25, tallZ);
+            scene.add(microNicheMesh);
+
+            const microMesh = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.32, 0.48), materials.microBody.clone());
+            microMesh.position.set(xRight - 0.33, 1.25, tallZ);
+            microMesh.userData = {
+                id: "microwave",
+                title: "Built-In Microwave Oven",
+                desc: "Ergonomic mid-level shelf placement inside the tall appliance unit."
+            };
+            scene.add(microMesh);
+            interactiveObjects.push(microMesh);
+
+            createLabel(xRight - 0.30, 2.35, tallZ, "3-Tier Tall Appliance Unit");
+
+            // REFRIGERATOR ZONE
+            const fridgeL = 0.66;
+            const fridgeZ = startZ + rightGraniteL + tallL + fridgeL / 2;
+
+            const fridgeGeo = new THREE.BoxGeometry(0.68, 1.85, fridgeL);
+            const fridgeMesh = new THREE.Mesh(fridgeGeo, materials.fridge.clone());
+            fridgeMesh.position.set(xRight - 0.34, 0.925, fridgeZ);
+            fridgeMesh.castShadow = true;
+            fridgeMesh.userData = {
+                id: "fridge",
+                title: "Refrigerator Zone (Far Right End)",
+                desc: "Positioned at far-right end with dedicated power point behind for clean cable routing."
+            };
+            scene.add(fridgeMesh);
+            interactiveObjects.push(fridgeMesh);
+
+            // Top Storage Box above Refrigerator
+            const topFridgeBoxGeo = new THREE.BoxGeometry(0.60, 0.40, fridgeL);
+            const topFridgeBoxMesh = new THREE.Mesh(topFridgeBoxGeo, materials.wood.clone());
+            topFridgeBoxMesh.position.set(xRight - 0.30, 2.05, fridgeZ);
+            topFridgeBoxMesh.userData = {
+                id: "top_fridge_box",
+                title: "Refrigerator Top Storage Box",
+                desc: "Overhead storage cabinet built directly above the refrigerator span."
+            };
+            scene.add(topFridgeBoxMesh);
+            interactiveObjects.push(topFridgeBoxMesh);
+            createLabel(xRight - 0.30, 2.35, fridgeZ, "Refrigerator Zone");
+
+            // -------------------------------------------------------------
+            // LEFT WALL (12 FT) ZONE
+            // -------------------------------------------------------------
+            // Master Switchboard near Entrance
+            const sbZ = (LEFT_L / 2) - 0.50;
+            const sbY = 1.35;
+            const sbBaseGeo = new THREE.BoxGeometry(0.02, 0.16, 0.24);
+            const sbBaseMesh = new THREE.Mesh(sbBaseGeo, materials.switchboard.clone());
+            sbBaseMesh.position.set(xLeft + 0.01, sbY, sbZ);
+            sbBaseMesh.userData = {
+                id: "switchboard",
+                title: "Master Electrical Switchboard",
+                desc: "Entrance board controlling main lights, profile LED lighting, and dual 6A utility sockets."
+            };
+            scene.add(sbBaseMesh);
+            interactiveObjects.push(sbBaseMesh);
+
+            for (let i = -0.07; i <= 0.07; i += 0.045) {
+                const swGeo = new THREE.BoxGeometry(0.01, 0.035, 0.02);
+                const swMesh = new THREE.Mesh(swGeo, materials.switchButton);
+                swMesh.position.set(xLeft + 0.02, sbY, sbZ + i);
+                scene.add(swMesh);
+            }
+            createLabel(xLeft + 0.05, sbY + 0.25, sbZ, "Master Switchboard");
+
+            // Japanese Sliding Glass Door
+            const clearanceGap = 0.58;
+            const doorWidth = 1.80;
+            const doorHeight = 1.83;
+            const doorCenterZ = zFront + 0.60 + clearanceGap + (doorWidth / 2);
+
+            const frameThickness = 0.05;
+            const trackGeo = new THREE.BoxGeometry(0.12, frameThickness, doorWidth + 0.1);
+            const topTrack = new THREE.Mesh(trackGeo, materials.aluminumFrame);
+            topTrack.position.set(xLeft + 0.04, doorHeight + frameThickness / 2, doorCenterZ);
+            scene.add(topTrack);
+
+            const bottomTrack = new THREE.Mesh(trackGeo, materials.aluminumFrame);
+            bottomTrack.position.set(xLeft + 0.04, frameThickness / 2, doorCenterZ);
+            scene.add(bottomTrack);
+
+            const sidePostGeo = new THREE.BoxGeometry(0.08, doorHeight, frameThickness);
+            const backPost = new THREE.Mesh(sidePostGeo, materials.aluminumFrame);
+            backPost.position.set(xLeft + 0.04, doorHeight / 2, doorCenterZ - doorWidth / 2);
+            scene.add(backPost);
+
+            const frontPost = new THREE.Mesh(sidePostGeo, materials.aluminumFrame);
+            frontPost.position.set(xLeft + 0.04, doorHeight / 2, doorCenterZ + doorWidth / 2);
+            scene.add(frontPost);
+
+            const panelW = (doorWidth / 2) + 0.04;
+            
+            const panel1Group = createJapaneseDoorPanelZ(panelW, doorHeight, "Fixed Frosted Glass Panel", "japanese_door");
+            panel1Group.position.set(xLeft + 0.02, doorHeight / 2, doorCenterZ - panelW / 2 + 0.02);
+            scene.add(panel1Group);
+
+            slidingPanel = createJapaneseDoorPanelZ(panelW, doorHeight, "Japanese Sliding Glass Door (Active Panel)", "japanese_door");
+            slidingPanel.position.set(xLeft + 0.06, doorHeight / 2, doorCenterZ + panelW / 2 - 0.02);
+            scene.add(slidingPanel);
+
+            createLabel(xLeft + 0.1, doorHeight + 0.25, doorCenterZ, "Japanese Sliding Door (6 FT)");
+
+            // 1.5 to 2.0 FT CORNER CLEARANCE GAP VISUALIZER
+            const gapZ = zFront + 0.60 + (clearanceGap / 2);
+            const gapGeo = new THREE.BoxGeometry(0.40, doorHeight, clearanceGap);
+            const gapMesh = new THREE.Mesh(gapGeo, materials.clearanceZone);
+            gapMesh.position.set(xLeft + 0.20, doorHeight / 2, gapZ);
+            gapMesh.userData = {
+                id: "corner_clearance",
+                title: "1.5 to 2 Feet Corner Clearance Gap",
+                desc: "Unobstructed passage between front counter corner and sliding door. Ensures smooth movement of appliances like the refrigerator."
+            };
+            scene.add(gapMesh);
+            interactiveObjects.push(gapMesh);
+            createLabel(xLeft + 0.25, 1.0, gapZ, "1.5-2ft Corner Clearance");
+        }
+
+        function createJapaneseDoorPanelZ(w, h, title, id) {
+            const group = new THREE.Group();
+
+            const glassGeo = new THREE.BoxGeometry(0.015, h, w);
+            const glassMesh = new THREE.Mesh(glassGeo, materials.frostedGlass.clone());
+            glassMesh.userData = {
+                id: id,
+                title: title,
+                desc: "6-foot tall frosted glass panel with aluminum frame on dual sliding tracks."
+            };
+            group.add(glassMesh);
+            interactiveObjects.push(glassMesh);
+
+            const borderGeo = new THREE.BoxGeometry(0.03, h, w);
+            const borderMesh = new THREE.Mesh(borderGeo, materials.aluminumFrame);
+            group.add(borderMesh);
+
+            const rows = 4;
+            const cols = 2;
+
+            for (let r = 1; r < rows; r++) {
+                const horizGeo = new THREE.BoxGeometry(0.035, 0.015, w - 0.04);
+                const horizMesh = new THREE.Mesh(horizGeo, materials.aluminumFrame);
+                horizMesh.position.y = -h / 2 + (h / rows) * r;
+                group.add(horizMesh);
+            }
+
+            for (let c = 1; c < cols; c++) {
+                const vertGeo = new THREE.BoxGeometry(0.035, h - 0.04, 0.015);
+                const vertMesh = new THREE.Mesh(vertGeo, materials.aluminumFrame);
+                vertMesh.position.z = -w / 2 + (w / cols) * c;
+                group.add(vertMesh);
+            }
+
+            return group;
+        }
+
+        function createLabel(x, y, z, text) {
+            labelsData.push({ pos: new THREE.Vector3(x, y, z), text: text });
+        }
+
+        function updateLabels() {
+            const container = document.getElementById('labels-overlay');
+            container.innerHTML = '';
+
+            if (!labelsVisible) return;
+
+            labelsData.forEach(item => {
+                const tempV = item.pos.clone();
+                tempV.project(camera);
+
+                if (tempV.z > 1) return;
+
+                const x = (tempV.x * .5 + .5) * window.innerWidth;
+                const y = (tempV.y * -.5 + .5) * window.innerHeight;
+
+                const div = document.createElement('div');
+                div.className = 'annotation-tag absolute transform -translate-x-1/2 -translate-y-1/2';
+                div.style.left = `${x}px`;
+                div.style.top = `${y}px`;
+                div.innerText = item.text;
+                container.appendChild(div);
+            });
+        }
+
+        // DYNAMIC WALL TRANSPARENCY / UNBLOCKING LOGIC
+        function autoUnblockCameraView(targetWall) {
+            // Reset all walls opacity
+            Object.values(wallObjects).forEach(wall => {
+                if (wall && wall.material) {
+                    wall.material.opacity = 1.0;
+                }
+            });
+
+            // Make camera-facing blocking wall transparent or invisible when inspecting
+            if (targetWall === 'front') {
+                if (wallObjects.back) wallObjects.back.material.opacity = 0.2;
+            } else if (targetWall === 'right') {
+                if (wallObjects.left) wallObjects.left.material.opacity = 0.15;
+            } else if (targetWall === 'left') {
+                if (wallObjects.right) wallObjects.right.material.opacity = 0.15;
+            } else if (targetWall === 'cylinder' || targetWall === 'corner_clearance') {
+                if (wallObjects.back) wallObjects.back.material.opacity = 0.25;
+                if (wallObjects.right) wallObjects.right.material.opacity = 0.25;
+            }
+        }
+
+        // OBJECT EMISSIVE HIGHLIGHTING
+        function applyHighlightToObject(targetObj) {
+            // Clear previous highlight
+            if (activeHighlightedObj && activeHighlightedObj.material && originalEmissive.has(activeHighlightedObj)) {
+                activeHighlightedObj.material.emissive.setHex(originalEmissive.get(activeHighlightedObj));
+            }
+
+            if (targetObj && targetObj.material && targetObj.material.emissive) {
+                if (!originalEmissive.has(targetObj)) {
+                    originalEmissive.set(targetObj, targetObj.material.emissive.getHex());
+                }
+                targetObj.material.emissive.setHex(0xd97706); // Amber highlight glow
+                activeHighlightedObj = targetObj;
+            }
+
+            // Apply Isolation Mode if active
+            applyIsolationVisibility();
+        }
+
+        function applyIsolationVisibility() {
+            interactiveObjects.forEach(obj => {
+                if (!isolationMode || !activeHighlightedObj) {
+                    obj.visible = true;
+                } else {
+                    obj.visible = (obj === activeHighlightedObj);
+                }
+            });
+        }
+
+        function toggleIsolationMode() {
+            isolationMode = !isolationMode;
+            applyIsolationVisibility();
+            document.getElementById('isolation-toggle-btn').innerHTML = isolationMode ? 
+                '<i class="fa-solid fa-eye"></i> Isolate Target: ON' : 
+                '<i class="fa-solid fa-eye-slash"></i> Isolate Target: OFF';
+        }
+
+        // CAMERA VIEWS POSITIONED INSIDE ROOM TO PREVENT WALL BLOCKING
+        function setCameraView(view) {
+            autoUnblockCameraView(view);
+
+            if (view === 'iso') {
+                animateCamera(new THREE.Vector3(-2.2, 2.8, 4.8), new THREE.Vector3(0, 1.1, -0.2));
+            } else if (view === 'front') {
+                // Interior camera looking directly at Front Wall
+                animateCamera(new THREE.Vector3(0, 1.35, 0.8), new THREE.Vector3(0, 1.25, -1.83));
+            } else if (view === 'right') {
+                // Interior camera looking directly at Right Wall
+                animateCamera(new THREE.Vector3(-0.4, 1.35, 0.0), new THREE.Vector3(1.065, 1.25, 0.0));
+            } else if (view === 'left') {
+                // Interior camera looking directly at Left Wall
+                animateCamera(new THREE.Vector3(0.4, 1.35, 0.0), new THREE.Vector3(-1.065, 1.25, 0.0));
+            }
+        }
+
+        function animateCamera(targetPosition, targetLookAt) {
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            let progress = 0;
+
+            function step() {
+                progress += 0.05;
+                if (progress <= 1) {
+                    camera.position.lerpVectors(startPos, targetPosition, progress);
+                    controls.target.lerpVectors(startTarget, targetLookAt, progress);
+                    controls.update();
+                    requestAnimationFrame(step);
+                }
+            }
+            step();
+        }
+
+        // SIDEBAR CLICK-TO-FOCUS & SELECTION HANDLER
+        function highlightSection(secId, btnEl) {
+            // Update sidebar button active state
+            document.querySelectorAll('.section-btn').forEach(btn => btn.classList.remove('border-amber-500', 'bg-slate-800'));
+            if (btnEl) btnEl.classList.add('border-amber-500', 'bg-slate-800');
+
+            // Find matching 3D object
+            const targetObj = interactiveObjects.find(obj => obj.userData && obj.userData.id === secId);
+            if (targetObj) {
+                applyHighlightToObject(targetObj);
+                showInspectorInfo(targetObj.userData.title, targetObj.userData.desc);
+            }
+
+            document.getElementById('active-focus-tag').classList.remove('hidden');
+
+            // Set unobstructed interior camera focus
+            if (secId === 'front_cooktop') {
+                autoUnblockCameraView('front');
+                animateCamera(new THREE.Vector3(0, 1.35, 0.5), new THREE.Vector3(0, 1.1, -1.83));
+            } else if (secId === 'right_wash') {
+                autoUnblockCameraView('right');
+                animateCamera(new THREE.Vector3(-0.3, 1.35, -0.4), new THREE.Vector3(1.065, 1.2, -0.4));
+            } else if (secId === 'right_tall_fridge') {
+                autoUnblockCameraView('right');
+                animateCamera(new THREE.Vector3(-0.3, 1.35, 1.1), new THREE.Vector3(1.065, 1.2, 1.1));
+            } else if (secId === 'japanese_door') {
+                autoUnblockCameraView('left');
+                animateCamera(new THREE.Vector3(0.3, 1.35, -0.3), new THREE.Vector3(-1.065, 1.2, -0.3));
+            } else if (secId === 'cylinder') {
+                autoUnblockCameraView('cylinder');
+                animateCamera(new THREE.Vector3(-0.4, 0.8, -0.5), new THREE.Vector3(-0.84, 0.55, -1.54));
+            } else if (secId === 'ro_niche') {
+                autoUnblockCameraView('right');
+                animateCamera(new THREE.Vector3(-0.1, 1.5, -0.5), new THREE.Vector3(0.9, 1.6, -0.5));
+            }
+        }
+
+        function toggleAccordion() {
+            const content = document.getElementById('accordion-container');
+            const icon = document.getElementById('accordion-icon');
+            const status = document.getElementById('accordion-status');
+
+            content.classList.toggle('active');
+            if (content.classList.contains('active')) {
+                icon.className = 'fa-solid fa-chevron-up';
+                status.innerText = 'Collapse List';
+            } else {
+                icon.className = 'fa-solid fa-chevron-down';
+                status.innerText = 'Expand List';
+            }
+        }
+
+        function toggleDoorSlide() {
+            doorIsOpen = !doorIsOpen;
+            const doorCenterZ = (-3.66 / 2) + 0.60 + 0.58 + 0.90;
+            const targetZ = doorIsOpen ? doorCenterZ + 0.85 : doorCenterZ + 0.43;
+            
+            let progress = 0;
+            const startZ = slidingPanel.position.z;
+
+            function slideStep() {
+                progress += 0.08;
+                if (progress <= 1) {
+                    slidingPanel.position.z = THREE.MathUtils.lerp(startZ, targetZ, progress);
+                    requestAnimationFrame(slideStep);
+                }
+            }
+            slideStep();
+
+            document.getElementById('door-slide-btn').innerHTML = doorIsOpen ?
+                '<i class="fa-solid fa-arrows-left-right"></i> Slide Door: Close' :
+                '<i class="fa-solid fa-arrows-left-right"></i> Slide Door: Open';
+        }
+
+        function toggleLights() {
+            profileLightState = !profileLightState;
+            profileLightGroup.visible = profileLightState;
+            document.getElementById('light-toggle-btn').innerHTML = profileLightState ? 
+                '<i class="fa-solid fa-lightbulb"></i> LED Light: ON' : 
+                '<i class="fa-regular fa-lightbulb"></i> LED Light: OFF';
+        }
+
+        function toggleLabels() {
+            labelsVisible = !labelsVisible;
+            document.getElementById('label-toggle-btn').innerHTML = labelsVisible ? 
+                '<i class="fa-solid fa-tags"></i> Labels: ON' : 
+                '<i class="fa-regular fa-tags"></i> Labels: OFF';
+        }
+
+        function onPointerDown(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+
+            if (intersects.length > 0) {
+                const clickedObj = intersects[0].object;
+                if (clickedObj.userData && clickedObj.userData.title) {
+                    applyHighlightToObject(clickedObj);
+                    showInspectorInfo(clickedObj.userData.title, clickedObj.userData.desc);
+                    document.getElementById('active-focus-tag').classList.remove('hidden');
+                }
+            }
+        }
+
+        function showInspectorInfo(title, desc) {
+            document.getElementById('spec-title').innerHTML = `<span><i class="fa-solid fa-circle-info text-amber-400"></i> ${title}</span>`;
+            document.getElementById('spec-desc').innerText = desc;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            updateLabels();
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
