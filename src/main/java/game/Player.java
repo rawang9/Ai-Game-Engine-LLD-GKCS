@@ -1,5 +1,7 @@
 package game;
 public class Player {
+    private int timeUsedInMillis;
+    private User id;
     private String playerSymbol;;
     public Player(String symbol){
         this.playerSymbol = symbol;
@@ -9,5 +11,11 @@ public class Player {
     }
     public String getSymbol(){
         return playerSymbol;
+    }
+    public void setTimeTaken(int timeInMillis){
+        this.timeUsedInMillis+=timeInMillis;
+    }
+    public int getTimeUsedInMillis(){
+        return timeUsedInMillis;
     }
 };

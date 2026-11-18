@@ -2,12 +2,12 @@ package game;
 
 public class GameInfo {
     boolean isOver;
-    String winnner;
+    String winner;
     boolean hasFork;
     Player player;
-    public GameInfo(GameState gameState,boolean hasFork,Player player){
-        this.isOver = gameState.checkIsOver();
-        this.winnner = gameState.getWinner();
+    public GameInfo(boolean isOver, String winner,boolean hasFork,Player player){
+        this.isOver = isOver;
+        this.winner = winner;
         this.hasFork = hasFork;
         this.player = player;
     }

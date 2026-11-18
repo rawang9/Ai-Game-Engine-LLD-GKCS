@@ -3,45 +3,30 @@ package api;
 import game.*;
 import boards.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class RuleEngine {
+    // #block start: retain the board type so RuleSet iteration yields typed Rules
+    Map<String, RuleSet<TicTokToe>> ruleMap = new HashMap<>();
+    // #block end
+    public RuleEngine(){
+        ruleMap.put(TicTokToe.class.getName(),TicTokToe.getRules());
+    }
     public GameState getState(Board board){
         if (board instanceof TicTokToe){
             TicTokToe ticTokToeBoard = (TicTokToe) board;
-
-            // #block start: spelling corrections for traversal and diagonal names
-            GameState rowWin = outerTraversal((i,j)-> ticTokToeBoard.getCell(i,j));
-            if (rowWin.checkIsOver()){
-                return rowWin;
-            }
-            GameState colWin = outerTraversal((i,j)-> ticTokToeBoard.getCell(j,i));
-            if (colWin.checkIsOver()){
-                return colWin;
-            }
-            GameState diagonalWin = traverse(j-> ticTokToeBoard.getCell(j,j));
-            if (diagonalWin.checkIsOver()){
-                return diagonalWin;
-            }
-            GameState reverseDiagonalWin = traverse(j-> ticTokToeBoard.getCell(j,2-j));
-            if (reverseDiagonalWin.checkIsOver()){
-                return reverseDiagonalWin;
-            }
-            // #block end
-            int countOfFilledCell = 0;
-            for(int i=0;i<3;i++){
-                for(int j=0;j<3;j++){
-                    if (ticTokToeBoard.getCell(i,j)!=null){
-                        countOfFilledCell++;
-                    }
+            for(Rule<TicTokToe> rule:ruleMap.get(TicTokToe.class.getName())){
+                GameState gameState = rule.condition.apply(ticTokToeBoard);
+                if (gameState.checkIsOver()){
+                    return gameState;
                 }
             }
-            if (countOfFilledCell==9){
-                return new GameState(true,"?");
-            }else {
-                return new GameState(false,"?");
-            }
+            return new GameState(false,"?");
         } else {
             throw new IllegalArgumentException();
         }
@@ -73,43 +58,24 @@ public class RuleEngine {
                             }
                         }
                         if(canStillWin){
-                            return new GameInfo(gameState,true,player.flip());
+                            return new GameInfoBuilder()
+                                    .isOver(gameState.checkIsOver())
+                                    .hasFork(true)
+                                    .player(player.flip())
+                                    .winner(gameState.getWinner())
+                                    .build();
                         }
                     }
                 }
             }
-            return new GameInfo(gameState,false,null);
+            return new GameInfoBuilder()
+                    .isOver(gameState.checkIsOver())
+                    .winner(gameState.getWinner())
+                    .build();
         } else {
             throw new IllegalArgumentException();
         }
 
     }
-    // #block start: corrected "outerTraversel" to "outerTraversal"
-    private GameState outerTraversal(BiFunction<Integer,Integer,String> traversal){
-        GameState result = new GameState(false,"-");
-        for(int i=0;i<3;i++){
-            final int ii = i;
-            GameState innerTraversal = traverse(j-> traversal.apply(ii,j));
-            if (innerTraversal.checkIsOver()) {
-                result = innerTraversal;
-                break;
-            }
-        }
-        return result;
-    }
-    // #block end
-    private GameState traverse(Function<Integer,String> traversal){
-        GameState result = new GameState(false,"-");
-        boolean possibleStreak=true;
-        for(int j=0;j<3;j++){
-            if(traversal.apply(j)==null || !traversal.apply(0).equals(traversal.apply(j))){
-                possibleStreak = false;
-                break;
-            }
-        }
-        if (possibleStreak) {
-            result = new GameState(true,traversal.apply(0));
-        }
-        return result;
-    }
+
 }
