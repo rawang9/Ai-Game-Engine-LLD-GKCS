@@ -42,11 +42,13 @@ public class RuleEngine {
                         Board b = ticTokToeBoard.copy();
                         Player player = new Player(playerSymbol[index]);
                         b.move(new Move(new Cell(i,j),player));
+                        Cell forkCell = null;
                         boolean canStillWin = false;
                         for(int k=0;k<3;k++) {
                             for (int l = 0; l < 3; l++) {
                                 Board b1 = b.copy();
-                                b1.move(new Move(new Cell(k,l),player.flip()));
+                                forkCell = new Cell(k,l);
+                                b1.move(new Move(forkCell,player.flip()));
                                 if (getState(b1).getWinner().equals(player.flip().getSymbol())){
                                     canStillWin = true;
                                     break;
@@ -61,6 +63,7 @@ public class RuleEngine {
                             return new GameInfoBuilder()
                                     .isOver(gameState.checkIsOver())
                                     .hasFork(true)
+                                    .forkCell(forkCell)
                                     .player(player.flip())
                                     .winner(gameState.getWinner())
                                     .build();

@@ -2,22 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9c2d1a6b-97a2-4d81-921f-1d689dafbb3a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/api/AiEnigine.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/api/GameEngine.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/game/Board.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/game/GameInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/game/Move.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/GameEngine.iml" beforeDir="false" afterPath="$PROJECT_DIR$/GameEngine.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/GameEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/api/RuleEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/boards/TicTokToe.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/boards/TicTokToe.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/game/Board.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/game/Cell.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/Cell.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/game/GameResult.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/GameState.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/game/Move.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/game/Path.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/Path.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/game/Player.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/Player.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/api/AiEnigine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/api/AiEnigine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/api/RuleEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/api/RuleEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/game/GameInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/GameInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/game/GameInfoBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/GameInfoBuilder.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,41 +127,11 @@
       <option name="presentableId" value="Default" />
       <updated>1793727259267</updated>
       <workItem from="1793727271426" duration="632000" />
-      <workItem from="1793978035226" duration="31379000" />
+      <workItem from="1793978035226" duration="43782000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/boards/TicTokToe.java</url>
-          <line>15</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/boards/TicTokToe.java</url>
-          <line>17</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/boards/TicTokToe.java</url>
-          <line>12</line>
-          <option name="timeStamp" value="9" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/src/main/java/boards/TicTokToe.java</url>
-          <line>14</line>
-          <properties class="boards.TicTokToe" method="setCells">
-            <option name="EMULATED" value="true" />
-            <option name="WATCH_EXIT" value="false" />
-          </properties>
-          <option name="timeStamp" value="8" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
