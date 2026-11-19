@@ -5,22 +5,26 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 
-public class TicTokToe implements Board {
+public class TicTokToe implements CellBoard {
     private String cells[][] = new String[3][3];
+    @Override 
+    public String getSymbol(int i,int j){
+        return cells[i][j];
+    }
 
     // #block start: return and create a RuleSet typed for TicTokToe
     public static RuleSet<TicTokToe> getRules(){
         RuleSet<TicTokToe> rules = new RuleSet<>();
     // #block end
-        rules.add(new Rule<TicTokToe>(board -> outerTraversal((i,j)-> board.getCell(i,j))));
-        rules.add(new Rule<TicTokToe>(board -> outerTraversal((i,j)-> board.getCell(j,i))));
-        rules.add(new Rule<TicTokToe>(board -> traverse(j-> board.getCell(j,j))));
-        rules.add(new Rule<TicTokToe>(board -> traverse(j-> board.getCell(j,2-j))));
-        rules.add(new Rule<TicTokToe>(board -> {
+        rules.add(new Rule(board -> outerTraversal((i,j)-> board.getSymbol(i,j))));
+        rules.add(new Rule(board -> outerTraversal((i,j)-> board.getSymbol(j,i))));
+        rules.add(new Rule(board -> traverse(j-> board.getSymbol(j,j))));
+        rules.add(new Rule(board -> traverse(j-> board.getSymbol(j,2-j))));
+        rules.add(new Rule(board -> {
             int countOfFilledCell = 0;
             for(int i=0;i<3;i++){
                 for(int j=0;j<3;j++){
-                    if (board.getCell(i,j)!=null){
+                    if (board.getSymbol(i,j)!=null){
                         countOfFilledCell++;
                     }
                 }
